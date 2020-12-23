@@ -5,8 +5,8 @@
 namespace detail {
 
 template <typename Parent, typename OnEmptyFn = void>
-struct fltsig_wmdelete : private detail::fltsig_base<void(xcb_client_message_event_t *), OnEmptyFn> {
-  using base_t = detail::fltsig_base<void(xcb_client_message_event_t *), OnEmptyFn>;
+struct fltsig_wmdelete : private fltsig_base<void(xcb_client_message_event_t *), OnEmptyFn> {
+  using base_t = fltsig_base<void(xcb_client_message_event_t *), OnEmptyFn>;
 
   fltsig_wmdelete(Parent &parent, xcb_atom_t wmprotocols_atom, xcb_atom_t wmdelete_atom)
     : parent(parent), wmprotocols_atom(wmprotocols_atom), wmdelete_atom(wmdelete_atom)
