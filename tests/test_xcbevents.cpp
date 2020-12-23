@@ -1,7 +1,7 @@
 #include "../xcbevents.h"
 //#include "../xcbevents-nortti.h"
 
-// g++ -Wall -o test_xcbevents test_xcbevents.cpp `pkg-config --cflags xcb`
+// g++ -Wall -std=c++11 -o test_xcbevents test_xcbevents.cpp `pkg-config --cflags xcb`
 
 void kp1(xcb_key_press_event_t *) { printf("kp1 key\n"); }
 //void kp1(xcb_motion_notify_event_t *) { printf("kp1 motion\n"); }

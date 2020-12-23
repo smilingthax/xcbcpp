@@ -3,7 +3,7 @@
 
  #include <unistd.h>  // usleep
 
-// g++ -Wall -o test_xcb_base test_xcb_base.cpp ../xcb_base.cpp `pkg-config --cflags --libs xcb`
+// g++ -Wall -std=c++11 -o test_xcb_base test_xcb_base.cpp ../xcb_base.cpp `pkg-config --cflags --libs xcb`
 
 int main()
 {

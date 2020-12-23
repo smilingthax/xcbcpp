@@ -1,7 +1,7 @@
 #include "../signals.h"
 #include <stdio.h>
 
-// g++ -Wall -o test_signals test_signals.cpp
+// g++ -Wall -std=c++11 -o test_signals test_signals.cpp
 
 struct foo {
   template <typename ParentSig>

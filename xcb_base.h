@@ -25,6 +25,15 @@ struct XcbEventError : XcbError {
 };
 
 #include "xcb_proto.tcc"
+#include "xcb_future.h"
+
+namespace detail {
+struct intern_atom_atom {
+  static xcb_atom_t map(xcb_intern_atom_reply_t *r) {
+    return r->atom;
+  }
+};
+} // namespace detail
 
 struct XcbConnection final {
   XcbConnection(const char *name = NULL);

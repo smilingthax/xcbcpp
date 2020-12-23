@@ -1,30 +1,27 @@
 #pragma once
 
-#include <memory>
 #include <xcb/xproto.h>
 
 namespace detail {
 
-struct c_free_deleter {
-  void operator()(void *table) const {
-    ::free(table);
-  }
-};
-
 template <typename T>
 struct XcbRequestTraits;
 
-#define MAKE_REQ_TRAIT(name) \
+#define MAKE_REQ_TRAIT(Name) \
   template <>                                             \
-  struct XcbRequestTraits<xcb_ ## name ## _request_t> {   \
-    using cookie_t = xcb_ ## name ## _cookie_t;           \
-    using reply_t = xcb_ ## name ## _reply_t;             \
+  struct XcbRequestTraits<xcb_ ## Name ## _request_t> {   \
+    using cookie_t = xcb_ ## Name ## _cookie_t;           \
+    using reply_t = xcb_ ## Name ## _reply_t;             \
+                                                          \
+    static constexpr const char *name= #Name;             \
+                                                          \
     template <typename... Args>                           \
     static cookie_t request(xcb_connection_t *c, Args&&... args) { \
-      return xcb_ ## name(c, (Args&&)args...);            \
+      return xcb_ ## Name(c, (Args&&)args...);            \
     }                                                     \
+                                                          \
     static reply_t *get(xcb_connection_t *conn, cookie_t cookie, xcb_generic_error_t **error) { \
-      return xcb_ ## name ## _reply(conn, cookie, error); \
+      return xcb_ ## Name ## _reply(conn, cookie, error); \
     }                                                     \
   }
 
@@ -71,26 +68,13 @@ MAKE_REQ_TRAIT(get_modifier_mapping);
 
 #undef MAKE_REQ_TRAIT
 
-struct wrap_unique_c_free {
-  template <typename T>
-  static auto map(T *t) -> std::unique_ptr<T, c_free_deleter> {
-    return t;
-  }
-};
-
-struct intern_atom_atom {
-  static xcb_atom_t map(xcb_intern_atom_reply_t *r) {
-    return r->atom;
-  }
-};
-
 template <uint8_t type>
 struct event_handler_type;
 
-#define SET_EVHT_ENTRY(val, name) \
+#define SET_EVHT_ENTRY(Val, Name) \
   template <>                              \
-  struct event_handler_type<XCB_ ## val> { \
-    using type = xcb_ ## name ## _event_t; \
+  struct event_handler_type<XCB_ ## Val> { \
+    using type = xcb_ ## Name ## _event_t; \
   }
 
 SET_EVHT_ENTRY(KEY_PRESS, key_press);
@@ -131,32 +115,4 @@ SET_EVHT_ENTRY(GE_GENERIC, ge_generic);
 #undef SET_EVHT_ENTRY
 
 } // namespace detail
-
-template <typename T, typename ReplyMapOp = detail::wrap_unique_c_free>
-class XcbFuture {
-  using Trait = detail::XcbRequestTraits<T>;
-  using reply_t = decltype(ReplyMapOp::map((typename Trait::reply_t *)0));
-public:
-  template <typename... Args>
-  XcbFuture(xcb_connection_t *conn, Args&&... args)
-    : conn(conn) {
-    cookie = Trait::request(conn, (Args&&)args...);
-  }
-
-  reply_t get() {
-    xcb_generic_error_t *error = NULL;
-    auto reply = Trait::get(conn, cookie, &error);
-    if (reply) {
-      return ReplyMapOp::map(reply);
-    }
-    // assert(error);
-    const int code = error->error_code;
-    free(error);
-    throw XcbEventError("xcb_intern_atom error", code); // TODO?!
-  }
-
-private:
-  xcb_connection_t *conn;
-  typename Trait::cookie_t cookie;
-};
 
