@@ -35,7 +35,7 @@ struct XcbEventCallbacks {
   }
 
   void emit(xcb_generic_event_t *ev) {
-    emit(ev->response_type, ev);
+    emit(ev->response_type & ~0x80, ev);
   }
 
 private:

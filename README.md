@@ -2,5 +2,5 @@
 
 Copyright (c) 2020 Tobias Hoffmann
 
-License: http://opensource.org/licenses/MIT
+License: https://opensource.org/licenses/MIT
 
