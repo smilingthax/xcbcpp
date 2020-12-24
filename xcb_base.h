@@ -36,6 +36,7 @@ struct intern_atom_atom {
 } // namespace detail
 
 using unique_xcb_generic_event_t = std::unique_ptr<xcb_generic_event_t, detail::c_free_deleter>;
+using unique_xcb_generic_error_t = std::unique_ptr<xcb_generic_error_t, detail::c_free_deleter>;
 
 struct XcbConnection final {
   XcbConnection(const char *name = NULL);

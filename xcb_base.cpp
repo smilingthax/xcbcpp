@@ -200,10 +200,9 @@ std::pair<xcb_atom_t, xcb_atom_t> XcbWindow::install_delete_handler()
 #if 1
   xcb_void_cookie_t ck = xcb_change_property_checked(conn, XCB_PROP_MODE_REPLACE, win, wmprotocols_atom, XCB_ATOM_ATOM, 8 * sizeof(*props), sizeof(props)/sizeof(*props), props);
 
-  xcb_generic_error_t *error = xcb_request_check(conn, ck);
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
     const int code = error->error_code;
-    free(error);
     throw XcbEventError("xcb_change_property_checked error", code);
   }
 #else
@@ -219,10 +218,9 @@ void XcbWindow::map()
 #if 1
   xcb_void_cookie_t ck = xcb_map_window_checked(conn, win);
 
-  xcb_generic_error_t *error = xcb_request_check(conn, ck);
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
     const int code = error->error_code;
-    free(error);
     throw XcbEventError(code);
   }
 #else
@@ -236,10 +234,9 @@ void XcbWindow::unmap()
 #if 1
   xcb_void_cookie_t ck = xcb_unmap_window_checked(conn, win);
 
-  xcb_generic_error_t *error = xcb_request_check(conn, ck);
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
     const int code = error->error_code;
-    free(error);
     throw XcbEventError(code);
   }
 #else

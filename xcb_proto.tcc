@@ -5,8 +5,8 @@
 namespace detail {
 
 struct c_free_deleter {
-  void operator()(void *table) const {
-    ::free(table);
+  void operator()(void *ptr) const {
+    ::free(ptr);
   }
 };
 
