@@ -4,12 +4,6 @@
 #include <memory>
 
 namespace detail {
-struct c_free_deleter {
-  void operator()(void *table) const {
-    ::free(table);
-  }
-};
-
 struct wrap_unique_c_free {
   template <typename T>
   static auto map(T *t) -> std::unique_ptr<T, c_free_deleter> {

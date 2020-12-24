@@ -35,6 +35,8 @@ struct intern_atom_atom {
 };
 } // namespace detail
 
+using unique_xcb_generic_event_t = std::unique_ptr<xcb_generic_event_t, detail::c_free_deleter>;
+
 struct XcbConnection final {
   XcbConnection(const char *name = NULL);
   XcbConnection(xcb_connection_t *conn, int default_screen_num = 0);
@@ -60,17 +62,13 @@ struct XcbConnection final {
 
   template <typename Fn>
   bool run_once(Fn&& fn) {
-    xcb_generic_event_t *ev;
-    while ((ev = xcb_poll_for_event(conn))) {
+    while (auto ev = unique_xcb_generic_event_t{xcb_poll_for_event(conn)}) {
       if (ev->response_type == 0) {
-        auto code = ((xcb_generic_error_t *)ev)->error_code;
-        free(ev);
+        auto code = ((xcb_generic_error_t *)ev.get())->error_code;
         throw XcbEventError(code);
-      } else if (!fn(ev)) {
-        free(ev);
+      } else if (!fn(ev.get())) {
         return false;
       }
-      free(ev);
     }
     return true;
   }

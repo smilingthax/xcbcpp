@@ -4,6 +4,12 @@
 
 namespace detail {
 
+struct c_free_deleter {
+  void operator()(void *table) const {
+    ::free(table);
+  }
+};
+
 template <typename T>
 struct XcbRequestTraits;
 
