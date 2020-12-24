@@ -183,6 +183,10 @@ struct XcbWindow final {
     xcb_visualid_t visual = XCB_COPY_FROM_PARENT);
   ~XcbWindow();
 
+  XcbWindow(const XcbWindow &) = delete;
+
+  std::pair<xcb_atom_t, xcb_atom_t> install_delete_handler();
+
   void map();
   void unmap();
 

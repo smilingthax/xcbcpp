@@ -178,6 +178,42 @@ XcbWindow::~XcbWindow()
 #endif
 }
 
+std::pair<xcb_atom_t, xcb_atom_t> XcbWindow::install_delete_handler()
+{
+  auto wmproto = conn.intern_atom("WM_PROTOCOLS", -1, false);
+  auto wmdel = conn.intern_atom("WM_DELETE_WINDOW", -1, false);
+
+  xcb_atom_t wmprotocols_atom = wmproto.get();
+  xcb_atom_t wmdelete_atom = wmdel.get();
+
+  if (wmprotocols_atom == XCB_ATOM_NONE) {
+    fprintf(stderr, "WM_PROTOCOLS not available\n");
+    return { XCB_ATOM_NONE, XCB_ATOM_NONE };
+  } else if (wmdelete_atom == XCB_ATOM_NONE) {
+    fprintf(stderr, "WM_DELETE_WINDOW not available\n");
+    return { XCB_ATOM_NONE, XCB_ATOM_NONE };
+  }
+
+  const xcb_atom_t props[] = {
+    wmdelete_atom
+  };
+#if 1
+  xcb_void_cookie_t ck = xcb_change_property_checked(conn, XCB_PROP_MODE_REPLACE, win, wmprotocols_atom, XCB_ATOM_ATOM, 8 * sizeof(*props), sizeof(props)/sizeof(*props), props);
+
+  xcb_generic_error_t *error = xcb_request_check(conn, ck);
+  if (error) {
+    const int code = error->error_code;
+    free(error);
+    throw XcbEventError("xcb_change_property_checked error", code);
+  }
+#else
+  xcb_change_property(conn, XCB_PROP_MODE_REPLACE, win, wmprotocols_atom, XCB_ATOM_ATOM, 8 * sizeof(*props), sizeof(props)/sizeof(*props), props);
+//  conn.flush();  // ?
+#endif
+
+  return {wmprotocols_atom, wmdelete_atom};
+}
+
 void XcbWindow::map()
 {
 #if 1
