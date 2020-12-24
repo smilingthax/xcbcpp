@@ -168,20 +168,20 @@ xkb_keysym_t XkbCompose::process_one(xkb_keysym_t in)
 }
 
 
+// NOTE: cannot forward to device_id ctor, because ExtensionBase has to init xkb first!
 XkbXcbProcessor::XkbXcbProcessor(xcb_connection_t *conn)
   : XkbXcbExtensionBase(conn), conn(conn), device_id(xkb_x11_get_core_keyboard_device_id(conn))
 {
-  context.reset(xkb_context_new(XKB_CONTEXT_NO_FLAGS));
-  if (!context) {
-    throw XkbError("xkb_context_new failed");
-  }
-
-  update_keymap();
-  select_xkb_events();
+  _init();
 }
 
 XkbXcbProcessor::XkbXcbProcessor(xcb_connection_t *conn, int32_t device_id)
   : XkbXcbExtensionBase(conn), conn(conn), device_id(device_id)
+{
+  _init();
+}
+
+void XkbXcbProcessor::_init()
 {
   context.reset(xkb_context_new(XKB_CONTEXT_NO_FLAGS));
   if (!context) {

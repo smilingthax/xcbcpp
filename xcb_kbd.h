@@ -102,6 +102,8 @@ xkb_context *get_context() const { return context.get(); } // FIXME
 
 private:
   struct Impl;
+
+  void _init();
   void update_keymap();
   void select_xkb_events() {}   // FIXME: TODO
 
