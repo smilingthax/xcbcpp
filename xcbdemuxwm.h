@@ -4,12 +4,12 @@
 
 namespace detail {
 
-template <typename Parent, typename OnEmptyFn = void>
+template <typename OnEmptyFn = void>
 struct fltsig_wmdelete : private fltsig_base<void(xcb_client_message_event_t *), OnEmptyFn> {
   using base_t = fltsig_base<void(xcb_client_message_event_t *), OnEmptyFn>;
 
-  fltsig_wmdelete(Parent &parent, xcb_atom_t wmprotocols_atom, xcb_atom_t wmdelete_atom)
-    : parent(parent), wmprotocols_atom(wmprotocols_atom), wmdelete_atom(wmdelete_atom)
+  fltsig_wmdelete(xcb_atom_t wmprotocols_atom, xcb_atom_t wmdelete_atom)
+    : wmprotocols_atom(wmprotocols_atom), wmdelete_atom(wmdelete_atom)
   { }
 
   void operator()(xcb_client_message_event_t *ev) {
@@ -19,8 +19,8 @@ struct fltsig_wmdelete : private fltsig_base<void(xcb_client_message_event_t *),
     }
   }
 
-  template <typename Fn = void (*)(xcb_client_message_event_t *)>
-  Connection on(Fn&& fn, SignalFlags flags = {}) {
+  template <typename Parent, typename Fn = void (*)(xcb_client_message_event_t *)>
+  Connection on(Parent &parent, Fn&& fn, SignalFlags flags = {}) {
     // assert(signal.empty() == !conn.connected());
     if (!base_t::conn.connected()) {
       // NOTE: no flags for on_client_message, must be the same for all calls!
@@ -30,7 +30,6 @@ struct fltsig_wmdelete : private fltsig_base<void(xcb_client_message_event_t *),
   }
 
 private:
-  Parent &parent;
   xcb_atom_t wmprotocols_atom;
   xcb_atom_t wmdelete_atom;
 };
@@ -53,12 +52,12 @@ private:
 public:
 
   XcbDemuxWithWM(xcb_atom_t wmprotocols_atom, xcb_atom_t wmdelete_atom)
-    : wmdelete_signal(*this, wmprotocols_atom, wmdelete_atom)
+    : wmdelete_signal(wmprotocols_atom, wmdelete_atom)
   { }
 
   template <typename Fn = void (*)(xcb_client_message_event_t *)>
   Connection on_wm_delete(Fn&& fn, SignalFlags flags = {}) {
-    return wmdelete_signal.on(fn, flags);
+    return wmdelete_signal.on(*this, fn, flags);
   }
 
   template <typename Fn = void (*)(xcb_client_message_event_t *)>
@@ -70,6 +69,6 @@ public:
   }
 
 protected:
-  detail::fltsig_wmdelete<XcbDemuxWithWM> wmdelete_signal;
+  detail::fltsig_wmdelete<> wmdelete_signal;
 };
 
