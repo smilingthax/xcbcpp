@@ -121,7 +121,7 @@ struct XcbDemux : XcbEventCallbacks {
     return _connect_mem<XCB_ ## Event, Type, &xcb_ ## Name ## _event_t:: Mem>(val, (Fn&&)fn, flags); \
   }                                                                                                  \
   template <typename Fn = void (*)(xcb_ ## Name ## _event_t *),                                      \
-            typename = typename std::enable_if<!std::is_integral<Fn>::value>::type>                  \
+            typename = typename std::enable_if<!std::is_same<Fn, Type>::value>::type>                \
   Connection on_ ## Name (Fn&& fn, SignalFlags flags = {}) {                                         \
     return XcbEventCallbacks::on<XCB_ ## Event>((Fn&&)fn, flags);                                    \
   }

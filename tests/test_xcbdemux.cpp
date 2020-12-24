@@ -2,6 +2,13 @@
 
 // g++ -Wall -std=c++11 -o test_xcbdemux test_xcbdemux.cpp `pkg-config --cflags xcb`
 
+struct onconn {
+  template <typename Fn>
+  Connection operator()(Fn&) {
+    return {};
+  }
+};
+
 int main()
 {
 #if 0
@@ -9,7 +16,7 @@ int main()
 
   struct nothing { void operator()() const { printf("onempty\n"); } };
 
-  detail::signal_for_mem<xcb_key_press_event_t, xcb_window_t, &xcb_key_press_event_t::event, nothing> k(XCB_KEY_PRESS, p);
+  detail::signal_for_mem<xcb_key_press_event_t, xcb_window_t, &xcb_key_press_event_t::event, onconn, nothing> k;
 
   k.connect(34, [](xcb_key_press_event_t *ev) {
     printf("hi\n");
