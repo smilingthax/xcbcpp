@@ -105,7 +105,19 @@ struct XcbConnection final {
   xcb_visualid_t default_visual() {
     return default_visual(default_screen_num);
   }
-  // TODO?  xcb_visualtype_t *get(xcb_visualid_t vid)   ?
+
+  xcb_visualtype_t *visualtype(xcb_screen_t *screen, xcb_visualid_t vid);
+  xcb_visualtype_t *visualtype(int screen_num, xcb_visualid_t vid) {
+    xcb_screen_t *screen = screen_of_display(screen_num);
+    return (screen) ? visualtype(screen, vid) : 0;
+  }
+  xcb_visualtype_t *default_visualtype(int screen_num) {
+    xcb_screen_t *screen = screen_of_display(screen_num);
+    return (screen) ? visualtype(screen, screen->root_visual) : 0;
+  }
+  xcb_visualtype_t *default_visualtype() {
+    return default_visualtype(default_screen_num);
+  }
 
   // (default_gc, default_gc_of_screen(int screen_num) ?)
 

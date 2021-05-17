@@ -104,6 +104,24 @@ xcb_screen_t *XcbConnection::screen_of_display(int screen_num)
   return screen_cache[screen_num];
 }
 
+xcb_visualtype_t *XcbConnection::visualtype(xcb_screen_t *screen, xcb_visualid_t vid)
+{
+  if (!screen) {
+    return NULL;
+  }
+
+  xcb_depth_iterator_t it = xcb_screen_allowed_depths_iterator(screen);
+  for (; it.rem; xcb_depth_next(&it)) {
+    xcb_visualtype_iterator_t jt = xcb_depth_visuals_iterator(it.data);
+    for (; jt.rem; xcb_visualtype_next(&jt)) {
+      if (vid == jt.data->visual_id) {
+        return jt.data;
+      }
+    }
+  }
+  return NULL;
+}
+
 void XcbConnection::flush()
 {
   const int res = xcb_flush(conn);
