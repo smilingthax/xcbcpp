@@ -55,6 +55,11 @@ public:
     : wmdelete_signal(wmprotocols_atom, wmdelete_atom)
   { }
 
+  // convenience ctor to use retval of win.install_delete_handler()
+  explicit XcbDemuxWithWM(std::pair<xcb_atom_t, xcb_atom_t> wmproto_wmdelete)
+    : XcbDemuxWithWM(wmproto_wmdelete.first, wmproto_wmdelete.second)
+  { }
+
   template <typename Fn = void (*)(xcb_client_message_event_t *)>
   Connection on_wm_delete(Fn&& fn, SignalFlags flags = {}) {
     return wmdelete_signal.on(*this, fn, flags);
