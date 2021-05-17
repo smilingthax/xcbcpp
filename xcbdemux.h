@@ -137,6 +137,8 @@ struct XcbDemux : XcbEventCallbacks {
   MAKE_ONFN(focus_out, FOCUS_OUT, xcb_window_t, event);
   MAKE_ONFN(expose, EXPOSE, xcb_window_t, window);
   // ...
+  MAKE_ONFN(configure_notify, CONFIGURE_NOTIFY, xcb_window_t, window);
+  // ...
   MAKE_ONFN(client_message, CLIENT_MESSAGE, xcb_window_t, window);
 #undef MAKE_ONFN
 
