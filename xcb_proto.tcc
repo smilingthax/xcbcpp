@@ -13,13 +13,13 @@ struct c_free_deleter {
 template <typename T>
 struct XcbRequestTraits;
 
-#define MAKE_REQ_TRAIT(Name) \
+#define XCB_MAKE_REQ_TRAIT(Name) \
   template <>                                             \
   struct XcbRequestTraits<xcb_ ## Name ## _request_t> {   \
     using cookie_t = xcb_ ## Name ## _cookie_t;           \
     using reply_t = xcb_ ## Name ## _reply_t;             \
                                                           \
-    static constexpr const char *name= #Name;             \
+    static constexpr const char *name = #Name;            \
                                                           \
     template <typename... Args>                           \
     static cookie_t request(xcb_connection_t *c, Args&&... args) { \
@@ -31,48 +31,46 @@ struct XcbRequestTraits;
     }                                                     \
   }
 
-MAKE_REQ_TRAIT(get_window_attributes);
-MAKE_REQ_TRAIT(get_geometry);
-MAKE_REQ_TRAIT(query_tree);
-MAKE_REQ_TRAIT(intern_atom);
-MAKE_REQ_TRAIT(get_atom_name);
-MAKE_REQ_TRAIT(get_property);
-MAKE_REQ_TRAIT(list_properties);
-MAKE_REQ_TRAIT(get_selection_owner);
-MAKE_REQ_TRAIT(grab_pointer);
-MAKE_REQ_TRAIT(grab_keyboard);
-MAKE_REQ_TRAIT(query_pointer);
-MAKE_REQ_TRAIT(get_motion_events);
-MAKE_REQ_TRAIT(translate_coordinates);
-MAKE_REQ_TRAIT(get_input_focus);
-MAKE_REQ_TRAIT(query_keymap);
-MAKE_REQ_TRAIT(query_font);
-MAKE_REQ_TRAIT(query_text_extents);
-MAKE_REQ_TRAIT(list_fonts);
-MAKE_REQ_TRAIT(list_fonts_with_info);
-MAKE_REQ_TRAIT(get_font_path);
-MAKE_REQ_TRAIT(get_image);
-MAKE_REQ_TRAIT(list_installed_colormaps);
-MAKE_REQ_TRAIT(alloc_color);
-MAKE_REQ_TRAIT(alloc_named_color);
-MAKE_REQ_TRAIT(alloc_color_cells);
-MAKE_REQ_TRAIT(alloc_color_planes);
-MAKE_REQ_TRAIT(query_colors);
-MAKE_REQ_TRAIT(lookup_color);
-MAKE_REQ_TRAIT(query_best_size);
-MAKE_REQ_TRAIT(query_extension);
-MAKE_REQ_TRAIT(list_extensions);
-MAKE_REQ_TRAIT(get_keyboard_mapping);
-MAKE_REQ_TRAIT(get_keyboard_control);
-MAKE_REQ_TRAIT(get_pointer_control);
-MAKE_REQ_TRAIT(get_screen_saver);
-MAKE_REQ_TRAIT(list_hosts);
-MAKE_REQ_TRAIT(set_pointer_mapping);
-MAKE_REQ_TRAIT(get_pointer_mapping);
-MAKE_REQ_TRAIT(set_modifier_mapping);
-MAKE_REQ_TRAIT(get_modifier_mapping);
-
-#undef MAKE_REQ_TRAIT
+XCB_MAKE_REQ_TRAIT(get_window_attributes);
+XCB_MAKE_REQ_TRAIT(get_geometry);
+XCB_MAKE_REQ_TRAIT(query_tree);
+XCB_MAKE_REQ_TRAIT(intern_atom);
+XCB_MAKE_REQ_TRAIT(get_atom_name);
+XCB_MAKE_REQ_TRAIT(get_property);
+XCB_MAKE_REQ_TRAIT(list_properties);
+XCB_MAKE_REQ_TRAIT(get_selection_owner);
+XCB_MAKE_REQ_TRAIT(grab_pointer);
+XCB_MAKE_REQ_TRAIT(grab_keyboard);
+XCB_MAKE_REQ_TRAIT(query_pointer);
+XCB_MAKE_REQ_TRAIT(get_motion_events);
+XCB_MAKE_REQ_TRAIT(translate_coordinates);
+XCB_MAKE_REQ_TRAIT(get_input_focus);
+XCB_MAKE_REQ_TRAIT(query_keymap);
+XCB_MAKE_REQ_TRAIT(query_font);
+XCB_MAKE_REQ_TRAIT(query_text_extents);
+XCB_MAKE_REQ_TRAIT(list_fonts);
+XCB_MAKE_REQ_TRAIT(list_fonts_with_info);
+XCB_MAKE_REQ_TRAIT(get_font_path);
+XCB_MAKE_REQ_TRAIT(get_image);
+XCB_MAKE_REQ_TRAIT(list_installed_colormaps);
+XCB_MAKE_REQ_TRAIT(alloc_color);
+XCB_MAKE_REQ_TRAIT(alloc_named_color);
+XCB_MAKE_REQ_TRAIT(alloc_color_cells);
+XCB_MAKE_REQ_TRAIT(alloc_color_planes);
+XCB_MAKE_REQ_TRAIT(query_colors);
+XCB_MAKE_REQ_TRAIT(lookup_color);
+XCB_MAKE_REQ_TRAIT(query_best_size);
+XCB_MAKE_REQ_TRAIT(query_extension);
+XCB_MAKE_REQ_TRAIT(list_extensions);
+XCB_MAKE_REQ_TRAIT(get_keyboard_mapping);
+XCB_MAKE_REQ_TRAIT(get_keyboard_control);
+XCB_MAKE_REQ_TRAIT(get_pointer_control);
+XCB_MAKE_REQ_TRAIT(get_screen_saver);
+XCB_MAKE_REQ_TRAIT(list_hosts);
+XCB_MAKE_REQ_TRAIT(set_pointer_mapping);
+XCB_MAKE_REQ_TRAIT(get_pointer_mapping);
+XCB_MAKE_REQ_TRAIT(set_modifier_mapping);
+XCB_MAKE_REQ_TRAIT(get_modifier_mapping);
 
 template <uint8_t type>
 struct event_handler_type;
