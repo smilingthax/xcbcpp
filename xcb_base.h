@@ -59,7 +59,10 @@ struct XcbConnection final {
   }
 
   // or XCB_ATOM_NONE (w/ create = false)
-  XcbFuture<xcb_intern_atom_request_t, detail::intern_atom_atom> intern_atom(const char *name, int len = -1, bool create = true);
+  XcbFuture<xcb_intern_atom_request_t, detail::intern_atom_atom> intern_atom(const char *name, bool create = false);
+  XcbFuture<xcb_intern_atom_request_t, detail::intern_atom_atom> intern_atom(const char *name, uint16_t len, bool create = false) {
+    return {conn, !create, len, name};
+  }
 
   template <typename Fn>
   bool run_once(Fn&& fn) {

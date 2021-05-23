@@ -133,13 +133,10 @@ void XcbConnection::flush()
   } // else: success
 }
 
-XcbFuture<xcb_intern_atom_request_t, detail::intern_atom_atom> XcbConnection::intern_atom(const char *name, int len, bool create)
+XcbFuture<xcb_intern_atom_request_t, detail::intern_atom_atom> XcbConnection::intern_atom(const char *name, bool create)
 {
   // assert(name);
-  if (len < 0) {
-    len = strlen(name);
-  }
-  return {conn, !create, len, name};
+  return {conn, !create, strlen(name), name};
 }
 
 const xcb_format_t *XcbConnection::format(uint8_t depth)
@@ -209,8 +206,8 @@ XcbWindow::~XcbWindow()
 
 std::pair<xcb_atom_t, xcb_atom_t> XcbWindow::install_delete_handler()
 {
-  auto wmproto = conn.intern_atom("WM_PROTOCOLS", -1, false);
-  auto wmdel = conn.intern_atom("WM_DELETE_WINDOW", -1, false);
+  auto wmproto = conn.intern_atom("WM_PROTOCOLS");
+  auto wmdel = conn.intern_atom("WM_DELETE_WINDOW");
 
   xcb_atom_t wmprotocols_atom = wmproto.get();
   xcb_atom_t wmdelete_atom = wmdel.get();
