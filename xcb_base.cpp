@@ -274,6 +274,22 @@ void XcbWindow::unmap()
 #endif
 }
 
+void XcbWindow::change(uint32_t value_mask, std::initializer_list<const uint32_t> value_list)
+{
+#if 1
+  xcb_void_cookie_t ck = xcb_change_window_attributes_checked(conn, win, value_mask, value_list.begin());
+
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
+  if (error) {
+    const int code = error->error_code;
+    throw XcbEventError(code);
+  }
+#else
+  xcb_change_window_attributes(conn, win, value_mask, value_list.begin());
+  conn.flush();
+#endif
+}
+
 
 XcbGC::XcbGC(
   XcbConnection &conn, xcb_drawable_t drawable,
@@ -307,6 +323,21 @@ XcbGC::~XcbGC()
 #else
   xcb_free_gc(conn, gc);
   conn.flush();
+#endif
+}
+
+void XcbGC::change(uint32_t value_mask, std::initializer_list<const uint32_t> value_list)
+{
+#if 1
+  xcb_void_cookie_t ck = xcb_change_gc_checked(conn, gc, value_mask, value_list.begin());
+
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
+  if (error) {
+    const int code = error->error_code;
+    throw XcbEventError(code);
+  }
+#else
+  xcb_change_gc(conn, gc, value_mask, value_list.begin());
 #endif
 }
 

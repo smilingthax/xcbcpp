@@ -215,6 +215,10 @@ struct XcbWindow final {
   void unmap();
 
   xcb_window_t get_window() { return win; }
+
+  // attributes
+  void change(uint32_t value_mask, std::initializer_list<const uint32_t> value_list);
+
 private:
   XcbConnection &conn;
   xcb_window_t win;
@@ -229,6 +233,8 @@ struct XcbGC final {
   ~XcbGC();
 
   XcbGC(const XcbGC &) = delete;
+
+  void change(uint32_t value_mask, std::initializer_list<const uint32_t> value_list);
 
   operator xcb_gcontext_t () {
     return gc;
