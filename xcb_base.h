@@ -106,16 +106,17 @@ struct XcbConnection final {
     return default_visual(default_screen_num);
   }
 
-  xcb_visualtype_t *visualtype(xcb_screen_t *screen, xcb_visualid_t vid);
-  xcb_visualtype_t *visualtype(int screen_num, xcb_visualid_t vid) {
+  // returns (vt, depth) or (0,0)
+  std::pair<const xcb_visualtype_t *, uint8_t> visualtype(xcb_screen_t *screen, xcb_visualid_t vid);
+  std::pair<const xcb_visualtype_t *, uint8_t> visualtype(int screen_num, xcb_visualid_t vid) {
     xcb_screen_t *screen = screen_of_display(screen_num);
-    return (screen) ? visualtype(screen, vid) : 0;
+    return (screen) ? visualtype(screen, vid) : std::make_pair<const xcb_visualtype_t *, uint8_t>(0, 0);
   }
-  xcb_visualtype_t *default_visualtype(int screen_num) {
+  std::pair<const xcb_visualtype_t *, uint8_t> default_visualtype(int screen_num) {
     xcb_screen_t *screen = screen_of_display(screen_num);
-    return (screen) ? visualtype(screen, screen->root_visual) : 0;
+    return (screen) ? visualtype(screen, screen->root_visual) : std::make_pair<const xcb_visualtype_t *, uint8_t>(0, 0);
   }
-  xcb_visualtype_t *default_visualtype() {
+  std::pair<const xcb_visualtype_t *, uint8_t> default_visualtype() {
     return default_visualtype(default_screen_num);
   }
 
@@ -170,8 +171,18 @@ struct XcbConnection final {
   }
 
   // display_planes / default_depth ?
-  // default_colormap ?
+
+  xcb_colormap_t default_colormap(int screen_num) {
+    const xcb_screen_t *screen = screen_of_display(screen_num);
+    return (screen) ? screen->default_colormap : 0;
+  }
+  xcb_colormap_t default_colormap() {
+    return default_colormap(default_screen_num);
+  }
+
   // event_mask_of_screen ??
+
+  const xcb_format_t *format(uint8_t depth);
 
 private:
   void cache_screens();
@@ -189,7 +200,7 @@ struct XcbWindow final {
   XcbWindow(
     XcbConnection &conn, xcb_window_t parent,
     uint16_t width, uint16_t height,
-    uint32_t value_mask = 0, std::initializer_list<const uintptr_t> value_list = {},
+    uint32_t value_mask = 0, std::initializer_list<const uint32_t> value_list = {},
     uint16_t klass = XCB_WINDOW_CLASS_INPUT_OUTPUT,
     int16_t x = 0, int16_t y = 0, uint16_t border_width = 0,
     uint8_t depth = XCB_COPY_FROM_PARENT,

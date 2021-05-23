@@ -62,7 +62,7 @@ XcbConnection::XcbConnection(const char *name)
 
   const int res = xcb_connection_has_error(conn);
   if (res) {
-    throw new XcbConnectionError(res);
+    throw XcbConnectionError(res);
   }
 
   setup = xcb_get_setup(conn);
@@ -104,10 +104,10 @@ xcb_screen_t *XcbConnection::screen_of_display(int screen_num)
   return screen_cache[screen_num];
 }
 
-xcb_visualtype_t *XcbConnection::visualtype(xcb_screen_t *screen, xcb_visualid_t vid)
+std::pair<const xcb_visualtype_t *, uint8_t> XcbConnection::visualtype(xcb_screen_t *screen, xcb_visualid_t vid)
 {
   if (!screen) {
-    return NULL;
+    return {NULL, 0};
   }
 
   xcb_depth_iterator_t it = xcb_screen_allowed_depths_iterator(screen);
@@ -115,11 +115,11 @@ xcb_visualtype_t *XcbConnection::visualtype(xcb_screen_t *screen, xcb_visualid_t
     xcb_visualtype_iterator_t jt = xcb_depth_visuals_iterator(it.data);
     for (; jt.rem; xcb_visualtype_next(&jt)) {
       if (vid == jt.data->visual_id) {
-        return jt.data;
+        return {jt.data, it.data->depth};
       }
     }
   }
-  return NULL;
+  return {NULL, 0};
 }
 
 void XcbConnection::flush()
@@ -142,11 +142,22 @@ XcbFuture<xcb_intern_atom_request_t, detail::intern_atom_atom> XcbConnection::in
   return {conn, !create, len, name};
 }
 
+const xcb_format_t *XcbConnection::format(uint8_t depth)
+{
+  xcb_format_iterator_t it = xcb_setup_pixmap_formats_iterator(setup);
+  for (int i = 0; it.rem; xcb_format_next(&it), i++) {
+    if (it.data->depth == depth) {
+      return it.data;
+    }
+  }
+  return NULL;
+}
+
 
 XcbWindow::XcbWindow(
   XcbConnection &conn, xcb_window_t parent,
   uint16_t width, uint16_t height,
-  uint32_t value_mask, std::initializer_list<const uintptr_t> value_list,
+  uint32_t value_mask, std::initializer_list<const uint32_t> value_list,
   uint16_t klass,
   int16_t x, int16_t y, uint16_t border_width,
   uint8_t depth, xcb_visualid_t visual)
@@ -161,7 +172,7 @@ XcbWindow::XcbWindow(
     XCB_WINDOW_CLASS_INPUT_OUTPUT, visual,
     value_mask, value_list.begin());
 
-  xcb_generic_error_t *error = xcb_request_check(conn, ck);
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
     throw XcbEventError(error->error_code);
   }
@@ -183,7 +194,7 @@ XcbWindow::~XcbWindow()
 #if 0
   xcb_void_cookie_t ck = xcb_destroy_window_checked(conn, win);
 
-  xcb_generic_error_t *error = xcb_request_check(conn, ck);
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
     fprintf(stderr, "xcb_destroy_window failed: %s (%d)\n",
       XcbEventError::get_error_string(error->error_code),
