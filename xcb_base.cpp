@@ -273,3 +273,40 @@ void XcbWindow::unmap()
   conn.flush();
 #endif
 }
+
+
+XcbGC::XcbGC(
+  XcbConnection &conn, xcb_drawable_t drawable,
+//  uint32_t value_mask, const void *value_list,
+  uint32_t value_mask, std::initializer_list<const uint32_t> value_list)
+  : conn(conn), gc(conn.generate_id())
+{
+  xcb_void_cookie_t ck = xcb_create_gc_checked(
+    conn, gc,
+    drawable,
+    value_mask, value_list.begin());
+
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
+  if (error) {
+    throw XcbEventError(error->error_code);
+  }
+}
+
+XcbGC::~XcbGC()
+{
+#if 0
+  xcb_void_cookie_t ck = xcb_free_gc_checked(conn, gc);
+
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
+  if (error) {
+    fprintf(stderr, "xcb_free_gc failed: %s (%d)\n",
+      XcbEventError::get_error_string(error->error_code),
+      error->error_code);
+//    throw XcbEventError(error->error_code);   // dtor shall be nothrow
+  }
+#else
+  xcb_free_gc(conn, gc);
+  conn.flush();
+#endif
+}
+

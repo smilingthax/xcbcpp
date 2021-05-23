@@ -220,3 +220,22 @@ private:
   xcb_window_t win;
 };
 
+struct XcbGC final {
+  XcbGC(
+    XcbConnection &conn,
+    xcb_drawable_t drawable,
+    uint32_t value_mask = 0, std::initializer_list<const uint32_t> value_list = {});
+
+  ~XcbGC();
+
+  XcbGC(const XcbGC &) = delete;
+
+  operator xcb_gcontext_t () {
+    return gc;
+  }
+
+private:
+  XcbConnection &conn;
+  xcb_gcontext_t gc;
+};
+
