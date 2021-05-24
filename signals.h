@@ -236,7 +236,7 @@ private:
   Connection **prev, *next;
 };
 
-detail::SignalConnectionBase::~SignalConnectionBase()
+inline detail::SignalConnectionBase::~SignalConnectionBase()
 {
   while (conns) {
     conns->node = nullptr;
