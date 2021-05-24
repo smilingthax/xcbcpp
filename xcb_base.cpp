@@ -150,6 +150,19 @@ const xcb_format_t *XcbConnection::format(uint8_t depth)
   return NULL;
 }
 
+XcbColor XcbConnection::color(uint16_t red, uint16_t green, uint16_t blue)
+{
+  xcb_colormap_t cmap = default_colormap(); // TODO?
+  XcbFuture<xcb_alloc_color_request_t> ac{conn, cmap, red, green, blue};
+  return {conn, cmap, ac.get()->pixel};
+}
+
+
+XcbColor::~XcbColor()
+{
+  xcb_free_colors(conn, cmap, ~0, 1, &pixel);  // (unchecked)
+}
+
 
 XcbWindow::XcbWindow(
   XcbConnection &conn, xcb_window_t parent,

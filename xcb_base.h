@@ -38,6 +38,8 @@ struct intern_atom_atom {
 using unique_xcb_generic_event_t = std::unique_ptr<xcb_generic_event_t, detail::c_free_deleter>;
 using unique_xcb_generic_error_t = std::unique_ptr<xcb_generic_error_t, detail::c_free_deleter>;
 
+class XcbColor;
+
 struct XcbConnection final {
   XcbConnection(const char *name = NULL);
   XcbConnection(xcb_connection_t *conn, int default_screen_num = 0);
@@ -187,6 +189,9 @@ struct XcbConnection final {
 
   const xcb_format_t *format(uint8_t depth);
 
+  // convenince (TODO? via XcbColormap wrapper?)
+  XcbColor color(uint16_t red, uint16_t green, uint16_t blue); // (cmap = default_colormap());
+
 private:
   void cache_screens();
 
@@ -198,6 +203,26 @@ private:
   const xcb_setup_t *setup;
   std::vector<xcb_screen_t *> screen_cache;
 };
+
+class XcbColor final { // "unique XcbColor" resource wrapper
+public:
+  XcbColor(xcb_connection_t *conn, xcb_colormap_t cmap, uint32_t pixel) // "takes" pixel
+    : conn(conn), cmap(cmap), pixel(pixel)
+  { }
+
+  ~XcbColor();
+
+  XcbColor &operator=(const XcbColor &) = delete;
+
+  operator uint32_t() {
+    return pixel;
+  }
+private:
+  xcb_connection_t *conn;
+  xcb_colormap_t cmap;
+  uint32_t pixel;
+};
+
 
 struct XcbWindow final {
   XcbWindow(
