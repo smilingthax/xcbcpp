@@ -17,7 +17,7 @@ namespace detail {
 // NOTE: actually not needed for Root, but this is the only possible non-templated base type; Node and Root also need a common prev/next Base...
 struct SignalConnectionBase {
   virtual ~SignalConnectionBase();
-  virtual void remove_node(SignalConnectionBase *root) = 0; // actually SignalListBase<...???...> *
+  virtual void remove_node() = 0;
 
   ::Connection *conns = {};
 };
@@ -36,13 +36,9 @@ struct SignalListBase<Ret(Args...)> : SignalConnectionBase {
     next.swap(node);
   }
 
-  void remove_node(SignalConnectionBase *root) override {
-    // assert(prev);
-    if (next) {
-      next->prev = prev;
-    } else {
-      static_cast<SignalListBase *>(root)->prev = prev;
-    }
+  void remove_node() override {
+    // assert(prev && next);
+    next->prev = prev;
 
     std::unique_ptr<SignalListBase> tmp = std::move(next);
     prev->setNext(tmp);  // tmp now holds *this and keeps it alive until the current scope ends
@@ -92,10 +88,10 @@ struct SignalListRoot final : SignalListRoot<Sig, void> {
   { }
 
   void clear() {
-    if (base_t::next) {
+    if (base_t::prev != this) {
       // SignalListRoot<Sig, void>::clear();
-      base_t::next.reset();
-      base_t::prev = nullptr;
+      base_t::next = std::move(base_t::prev->next);
+      base_t::prev = this;
       onempty();
     }
   }
@@ -103,7 +99,7 @@ struct SignalListRoot final : SignalListRoot<Sig, void> {
   void setNext(std::unique_ptr<base_t> &node) override {
     // base_t::setNext(node);
     base_t::next.swap(node);
-    if (!base_t::next) {
+    if (base_t::prev == this) { // (via remove_node) - or: (base_t::next.get() == this)
       onempty();
     }
   }
@@ -116,13 +112,13 @@ template <typename Ret, typename... Args>
 struct SignalListRoot<Ret(Args...), void> : SignalListBase<Ret(Args...)> {
   void clear() {
     using base_t = SignalListBase<Ret(Args...)>;
-    base_t::next.reset();
-    base_t::prev = nullptr;
+    base_t::next = std::move(base_t::prev->next);
+    base_t::prev = this;
   }
   Ret operator()(Args...) override {
     throw 0;
   }
-  void remove_node(SignalConnectionBase *root) override {
+  void remove_node() override {
     throw 0;
   }
 //  using base_t::setNext;
@@ -164,7 +160,7 @@ struct reduce_use_last<void> : reduce_void { };
 
 struct Connection final {
   Connection()
-    : node(), root(), prev(), next()
+    : node(), prev(), next()
   { }
 
   ~Connection() {
@@ -188,7 +184,6 @@ struct Connection final {
     }
 
     node = move(rhs.node);
-    root = move(rhs.root);
     prev = move(rhs.prev);
     next = move(rhs.next);
 
@@ -205,7 +200,7 @@ struct Connection final {
   void disconnect() {
     if (node) {
       unlink();
-      node->remove_node(root);
+      node->remove_node();
       node = nullptr;
     }
   }
@@ -219,8 +214,8 @@ private:
   friend class Signal;
   friend struct detail::SignalConnectionBase;
 
-  Connection(detail::SignalConnectionBase *node, detail::SignalConnectionBase *root)
-    : node(node), root(root), prev(&node->conns), next(node->conns) {
+  Connection(detail::SignalConnectionBase *node)
+    : node(node), prev(&node->conns), next(node->conns) {
     node->conns = this;
     if (next) {
       *next->prev = this;
@@ -242,7 +237,7 @@ private:
     return ret;
   }
 
-  detail::SignalConnectionBase *node, *root;
+  detail::SignalConnectionBase *node;
   Connection **prev, *next;
 };
 
@@ -264,51 +259,58 @@ class Signal<Ret(Args...), OnEmptyFn, DefaultRetvalFn> final {
   using base_t = detail::SignalListBase<Sig>;
 public:
   Signal() = default;
+  Signal(const Signal &) = delete;
+  Signal &operator=(const Signal &) = delete;
 
   // template to avoid error when OnEmptyFn = void
   template <typename Fn = OnEmptyFn,
             typename = typename std::enable_if<std::is_same<Fn, OnEmptyFn>::value>::type>
-  Signal(Fn& onempty) : root{onempty} { }
+  Signal(Fn& onempty)
+    : root{new detail::SignalListRoot<Sig, OnEmptyFn>{onempty}}
+  {
+    root->next.reset(root);
+    root->prev = root;
+  }
 
   template <typename Fn = OnEmptyFn,
             typename = typename std::enable_if<std::is_same<Fn, OnEmptyFn>::value>::type>
-  Signal(Fn&& onempty) : root{onempty} { }
+  Signal(Fn&& onempty)
+    : root{new detail::SignalListRoot<Sig, OnEmptyFn>{onempty}}
+  {
+    root->next.reset(root);
+    root->prev = root;
+  }
+
+  ~Signal() {
+    if (root) {
+      root->next.reset();
+    }
+  }
 
   void clear() {
-    root.clear();
+    if (root) {
+      root->clear();
+    }
   }
 
   bool empty() const {
-    return !root.next;
+    return (!root || root == root->prev);
   }
 
   template <typename Fn>
   Connection prepend(Fn&& fn, bool once = false) {
     auto node = new detail::SignalListNode<Sig, Fn>{(Fn&&)fn, once};
-    if (root.next) {
-      root.next->prev = node;
-      node->next = std::move(root.next);
-    } else {
-      root.prev = node;
-    }
-    root.next.reset(node);
-    return {node, &root};
+    ensure_root();
+    insert_node(node, root->next);
+    return {node};
   }
 
   template <typename Fn>
   Connection append(Fn&& fn, bool once = false) {
     auto node = new detail::SignalListNode<Sig, Fn>{(Fn&&)fn, once};
-    if (root.prev) {
-      // assert(!root.prev->next);
-      root.prev->next.reset(node);
-      node->prev = root.prev;
-      // NOTE: node->next must stay empty, because root is already owned
-    } else {
-      root.next.reset(node);
-      node->prev = &root;
-    }
-    root.prev = node;
-    return {node, &root};
+    ensure_root();
+    insert_node(node, root->prev->next);
+    return {node};
   }
 
   template <typename Fn>
@@ -320,11 +322,11 @@ public:
             typename = typename std::enable_if<!std::is_void<Ret>::value, ReduceRetvalFn>::type>
   auto emit(Args... args) -> decltype(((ReduceRetvalFn *)0)->get()) {
     ReduceRetvalFn ret;
-    for (base_t *node = root.next.get(); node; node = node->next.get()) {
+    for (base_t *node = root ? root->next.get() : root; node != root; node = node->next.get()) {
       const detail::reduce_result_t res = ret((*node)(args...));
       if (res == detail::reduce_result_t::REMOVE_HANDLER || node->once) {
         node = node->prev;
-        node->next->remove_node(&root);
+        node->next->remove_node();
       }
       if (res == detail::reduce_result_t::STOP) {
         return ret.get();
@@ -336,16 +338,35 @@ public:
   template <typename ReduceRetvalFn = DefaultRetvalFn,
             typename = typename std::enable_if<std::is_void<Ret>::value, ReduceRetvalFn>::type>
   void emit(Args... args) {
-    for (base_t *node = root.next.get(); node; node = node->next.get()) {
+    for (base_t *node = root ? root->next.get() : root; node != root; node = node->next.get()) {
       (*node)(args...);
       if (node->once) {
         node = node->prev;
-        node->next->remove_node(&root);
+        node->next->remove_node();
       }
     }
   }
 
 private:
-  detail::SignalListRoot<Sig, OnEmptyFn> root;
+  detail::SignalListRoot<Sig, OnEmptyFn> *root = {};
+
+  void ensure_root() {
+    if (!root) { // i.e. via default ctor
+      root = new detail::SignalListRoot<Sig, OnEmptyFn>{};
+      root->next.reset(root);
+      root->prev = root;
+    }
+  }
+
+  void insert_node(base_t *node, std::unique_ptr<base_t> &atnext) {
+    // assert(node && atnext);
+    // assert(!node->prev && !node->next);
+
+    node->prev = atnext->prev;
+    atnext->prev = node;
+
+    node->next = std::move(atnext);
+    atnext.reset(node);
+  }
 };
 
