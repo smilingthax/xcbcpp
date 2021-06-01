@@ -1,4 +1,5 @@
 #include "../signals.h"
+//#include "../signals-listloop.h"
 #include <stdio.h>
 
 // g++ -Wall -std=c++11 -o test_signals test_signals.cpp
@@ -45,7 +46,7 @@ sig.emit(3);
 //  conn2.disconnect();
 //  conn2->disconnect();
 
-#else
+#elif 0
   Signal<void(int)> sig;
 
   struct bla {
@@ -59,8 +60,26 @@ sig.connect(bla{});
 auto conn2 = sig.append([](int i) { printf("ho %d\n", i); });
 //auto y=[&sig](int i){ printf("hi %d\n", i); }; sig.connect(y); // sig.connect(std::move(y));
 
+//conn2.disconnect();
+//auto conn3 = sig.append([](int i) { printf("ho2 %d\n", i); });
+conn2 = sig.append([](int i) { printf("ho2 %d\n", i); });
+
 sig.emit(3);
 
+#else
+Signal<void(int)> sig2;
+  Signal<bool(int), void, detail::reduce_stop_on_true> sig;
+  sig.append([](int i) {
+    printf("x1 %d\n", i);
+
+    return !true;
+  });
+
+  sig.append([](int i) {
+    printf("y1 %d\n", i);
+  });
+
+   sig.emit(2);
 #endif
 
   return 0;

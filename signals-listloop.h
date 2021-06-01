@@ -14,6 +14,40 @@ enum SignalFlags {
 
 namespace detail {
 
+template <typename T>
+struct simple_optional {
+  simple_optional() = default;
+
+  template <typename U = T>
+  simple_optional(U&& u) : active(true) {
+    new(&val) T((U&&)u);
+  }
+
+  ~simple_optional() {
+    if (active) {
+      val.~T();
+    }
+  }
+
+  simple_optional &operator=(const simple_optional &rhs) = delete;
+
+  explicit operator bool() const noexcept {
+    return active;
+  }
+
+  T &operator*() {
+    // assert(active);
+    return val;
+  }
+
+private:
+  union {
+    char dummy;
+    T val;
+  };
+  bool active = false;
+};
+
 // NOTE: actually not needed for Root, but this is the only possible non-templated base type; Node and Root also need a common prev/next Base...
 struct SignalConnectionBase {
   virtual ~SignalConnectionBase();
@@ -31,7 +65,9 @@ struct SignalListBase<Ret(Args...)> : SignalConnectionBase {
   SignalListBase(bool once) : once(once) { }
   SignalListBase(SignalListBase &&) = delete;  // TODO?
 
-  virtual Ret operator()(Args...) = 0;
+  using optional_Ret = typename std::conditional<!std::is_void<Ret>::value, simple_optional<Ret>, void>::type;
+
+  virtual optional_Ret operator()(Args...) = 0;
 
   virtual void setNext(std::unique_ptr<SignalListBase> &node) {
     next.swap(node);
@@ -51,24 +87,47 @@ struct SignalListBase<Ret(Args...)> : SignalConnectionBase {
   bool once = false;  // unused in SignalListRoot, but shall be accessible with only Base*
 };
 
-template <typename Sig, typename Fn>
+template <typename Sig, typename Fn, typename FnRet>
 struct SignalListNode;
 
-template <typename Ret, typename... Args, typename Fn>
-struct SignalListNode<Ret(Args...), Fn> final : SignalListBase<Ret(Args...)> {
+template <typename Ret, typename... Args, typename Fn, typename FnRet>
+struct SignalListNode<Ret(Args...), Fn, FnRet> final : SignalListBase<Ret(Args...)> {
   SignalListNode(Fn&& fn, bool once)
     : SignalListBase<Ret(Args...)>(once), fn((Fn&&)fn)
   { }
 
-  Ret operator()(Args... args) override {
-    return fn(args...);
+  simple_optional<Ret> operator()(Args... args) override {
+    return {fn(args...)};
   }
 
   Fn fn;
 };
 
+template <typename Ret, typename... Args, typename Fn>
+struct SignalListNode<Ret(Args...), Fn, void> final : SignalListBase<Ret(Args...)> {
+  SignalListNode(Fn&& fn, bool once)
+    : SignalListBase<Ret(Args...)>(once), fn((Fn&&)fn)
+  { }
+
+  simple_optional<Ret> operator()(Args... args) override {
+    fn(args...);
+    return {};
+  }
+
+  Fn fn;
+};
+
+// generate a nice error:
+template <typename... Args, typename Fn, typename FnRet>
+struct SignalListNode<void(Args...), Fn, FnRet> final : SignalListBase<void(Args...)> {
+  SignalListNode(Fn&& fn, bool once) {
+    static_assert(std::is_void<FnRet>::value, "Function for Signal<void(...)> must not return a value");
+  }
+  void operator()(Args... args) override { throw 0; }
+};
+
 template <typename... Args, typename Fn>
-struct SignalListNode<void(Args...), Fn> final : SignalListBase<void(Args...)> {
+struct SignalListNode<void(Args...), Fn, void> final : SignalListBase<void(Args...)> {
   SignalListNode(Fn&& fn, bool once)
     : SignalListBase<void(Args...)>(once), fn((Fn&&)fn)
   { }
@@ -111,12 +170,13 @@ private:
 
 template <typename Ret, typename... Args>
 struct SignalListRoot<Ret(Args...), void> : SignalListBase<Ret(Args...)> {
+  using base_t = SignalListBase<Ret(Args...)>;
+
   void clear() {
-    using base_t = SignalListBase<Ret(Args...)>;
     base_t::next = std::move(base_t::prev->next);
     base_t::prev = this;
   }
-  Ret operator()(Args...) override {
+  typename base_t::optional_Ret operator()(Args...) override {
     throw 0;
   }
   void remove_node() override {
@@ -143,7 +203,7 @@ template <typename T>
 struct reduce_use_last { // {{{
   reduce_use_last(T init = {}) : last(std::move(init)) {}
 
-  reduce_result_t operator()(T next) {
+  reduce_result_t operator()(T next = {}) {
     last = std::move(next);
     return reduce_result_t::CONTINUE;
   }
@@ -258,6 +318,9 @@ template <typename Ret, typename... Args, typename OnEmptyFn, typename DefaultRe
 class Signal<Ret(Args...), OnEmptyFn, DefaultRetvalFn> final {
   using Sig = Ret(Args...);
   using base_t = detail::SignalListBase<Sig>;
+
+  template <typename Fn>
+  using RetOf = decltype(std::declval<Fn>()(std::declval<Args>()...));
 public:
   Signal() = default;
   Signal(const Signal &) = delete;
@@ -300,7 +363,7 @@ public:
 
   template <typename Fn>
   Connection prepend(Fn&& fn, bool once = false) {
-    auto node = new detail::SignalListNode<Sig, Fn>{(Fn&&)fn, once};
+    auto node = new detail::SignalListNode<Sig, Fn, RetOf<Fn>>{(Fn&&)fn, once};
     ensure_root();
     insert_node(node, root->next);
     return {node};
@@ -308,7 +371,7 @@ public:
 
   template <typename Fn>
   Connection append(Fn&& fn, bool once = false) {
-    auto node = new detail::SignalListNode<Sig, Fn>{(Fn&&)fn, once};
+    auto node = new detail::SignalListNode<Sig, Fn, RetOf<Fn>>{(Fn&&)fn, once};
     ensure_root();
     insert_node(node, root->prev->next);
     return {node};
@@ -324,7 +387,8 @@ public:
   auto emit(Args... args) -> decltype(((ReduceRetvalFn *)0)->get()) {
     ReduceRetvalFn ret;
     for (base_t *node = root ? root->next.get() : root; node != root; node = node->next.get()) {
-      const detail::reduce_result_t res = ret((*node)(args...));
+      auto &&opt = (*node)(args...);
+      const detail::reduce_result_t res = (opt) ? ret(*opt) : ret();
       if (res == detail::reduce_result_t::REMOVE_HANDLER || node->once) {
         node = node->prev;
         node->next->remove_node();
