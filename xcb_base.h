@@ -79,6 +79,25 @@ struct XcbConnection final {
     return true;
   }
 
+  template <typename Fn>
+  bool wait_once(Fn&& fn) {
+    auto ev = unique_xcb_generic_event_t{xcb_wait_for_event(conn)};
+    if (!ev) {
+      return true;
+    } else if (ev->response_type == 0) {
+      auto code = ((xcb_generic_error_t *)ev.get())->error_code;
+      throw XcbEventError(code);
+    } else if (!fn(ev.get())) {
+      return false;
+    }
+    return true;
+  }
+
+  template <typename Fn>
+  void run(Fn&& fn) {
+    while (wait_once((Fn&&)fn));
+  }
+
 //  const xcb_setup_t *get_setup() const { return setup; }
 
   int screen_count() {
