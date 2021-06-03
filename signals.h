@@ -356,6 +356,7 @@ public:
       root.prev = node;
     }
     root.next.reset(node);
+    node->prev = &root;
     return {node, &root};
   }
 
