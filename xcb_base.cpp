@@ -157,6 +157,35 @@ XcbColor XcbConnection::color(uint16_t red, uint16_t green, uint16_t blue)
   return {conn, cmap, ac.get()->pixel};
 }
 
+xcb_grab_status_t XcbConnection::grab_pointer(
+  xcb_window_t win, uint16_t event_mask,
+  xcb_cursor_t cursor, bool pointer_async, bool keyboard_async,
+  bool owner_events, xcb_window_t confine_to,
+  xcb_timestamp_t time)
+{
+  XcbFuture<xcb_grab_pointer_request_t> gpr(conn,
+    owner_events ? 1 : 0, win, event_mask,
+    pointer_async ? XCB_GRAB_MODE_ASYNC : XCB_GRAB_MODE_SYNC,
+    keyboard_async ? XCB_GRAB_MODE_ASYNC : XCB_GRAB_MODE_SYNC,
+    confine_to, cursor, time);
+  return (xcb_grab_status_t)gpr.get()->status;
+}
+
+void XcbConnection::ungrab_pointer(xcb_timestamp_t time)
+{
+#if 0
+  xcb_void_cookie_t ck = xcb_ungrab_pointer_checked(conn, time);
+
+  unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
+  if (error) {
+    throw XcbEventError("xcb_ungrab_pointer_checked error", error->error_code);
+  }
+#else
+  xcb_ungrab_pointer(conn, time);
+  flush();
+#endif
+}
+
 
 XcbColor::~XcbColor()
 {

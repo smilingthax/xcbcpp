@@ -189,6 +189,16 @@ struct XcbConnection final {
 
   const xcb_format_t *format(uint8_t depth);
 
+  // NOTE/HACK: not on XcbWindow to allow calling with raw xcb_window_t, esp. as ungrab_pointer does not need a window at all
+  // NOTE: only pointer-masks are valid in event_mask
+  xcb_grab_status_t grab_pointer(
+    xcb_window_t win, uint16_t event_mask,
+    xcb_cursor_t cursor = XCB_CURSOR_NONE,
+    bool pointer_async = true, bool keyboard_async = true,
+    bool owner_events = false, xcb_window_t confine_to = XCB_NONE,
+    xcb_timestamp_t time = XCB_CURRENT_TIME);
+  void ungrab_pointer(xcb_timestamp_t time = XCB_CURRENT_TIME);
+
   // convenince (TODO? via XcbColormap wrapper?)
   XcbColor color(uint16_t red, uint16_t green, uint16_t blue); // (cmap = default_colormap());
 
@@ -246,6 +256,19 @@ struct XcbWindow final {
 
   // attributes
   void change(uint32_t value_mask, std::initializer_list<const uint32_t> value_list);
+
+  // NOTE: only pointer-masks are valid in event_mask
+  xcb_grab_status_t grab_pointer(
+    uint16_t event_mask,
+    xcb_cursor_t cursor = XCB_CURSOR_NONE,
+    bool pointer_async = true, bool keyboard_async = true,
+    bool owner_events = false, xcb_window_t confine_to = XCB_NONE,
+    xcb_timestamp_t time = XCB_CURRENT_TIME) {
+    return conn.grab_pointer(win, event_mask, cursor, pointer_async, keyboard_async, owner_events, confine_to, time);
+  }
+  void ungrab_pointer(xcb_timestamp_t time = XCB_CURRENT_TIME) {
+    return conn.ungrab_pointer(time);
+  }
 
 private:
   XcbConnection &conn;
