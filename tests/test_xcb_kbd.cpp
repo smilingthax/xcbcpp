@@ -25,7 +25,7 @@ int main()
 
   win.map();
 
-  // TODO?! XErrorEvent can, with xkb extension, also be BadKeyboard (FIXME in run_once / XcbEventError ?!)
+  // TODO?! XErrorEvent can, with xkb extension, also be BadKeyboard (FIXME in run_once / XcbGenericError ?!)
   while (conn.run_once([&kproc](xcb_generic_event_t *ev) {
 if (kproc.process(ev)) return true;
     switch (ev->response_type & ~0x80) {

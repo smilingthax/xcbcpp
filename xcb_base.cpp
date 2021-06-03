@@ -30,17 +30,17 @@ const char *XcbConnectionError::get_error_string(int code)
   return ""; // TODO?
 }
 
-XcbEventError::XcbEventError(int code)
-  : XcbError(std::string("XcbEventError: ") + get_error_string(code), code)
+XcbGenericError::XcbGenericError(int code)
+  : XcbError(std::string("XcbGenericError: ") + get_error_string(code), code)
 {
 }
 
-XcbEventError::XcbEventError(const std::string &prefix, int code)
+XcbGenericError::XcbGenericError(const std::string &prefix, int code)
   : XcbError(prefix + ": " + get_error_string(code), code)
 {
 }
 
-const char *XcbEventError::get_error_string(int code)
+const char *XcbGenericError::get_error_string(int code)
 {
   static constexpr const char *errstrs[] = {
     "Success", "BadRequest", "BadValue", "BadWindow", "BadPixmap",
@@ -178,7 +178,7 @@ void XcbConnection::ungrab_pointer(xcb_timestamp_t time)
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    throw XcbEventError("xcb_ungrab_pointer_checked error", error->error_code);
+    throw XcbGenericError("xcb_ungrab_pointer_checked error", error->error_code);
   }
 #else
   xcb_ungrab_pointer(conn, time);
@@ -213,7 +213,7 @@ XcbWindow::XcbWindow(
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    throw XcbEventError(error->error_code);
+    throw XcbGenericError(error->error_code);
   }
 #else
   xcb_create_window_checked(
@@ -236,9 +236,9 @@ XcbWindow::~XcbWindow()
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
     fprintf(stderr, "xcb_destroy_window failed: %s (%d)\n",
-      XcbEventError::get_error_string(error->error_code),
+      XcbGenericError::get_error_string(error->error_code),
       error->error_code);
-//    throw XcbEventError(error->error_code);   // dtor shall be nothrow
+//    throw XcbGenericError(error->error_code);   // dtor shall be nothrow
   }
 #else
   xcb_destroy_window(conn, win);
@@ -270,8 +270,7 @@ std::pair<xcb_atom_t, xcb_atom_t> XcbWindow::install_delete_handler()
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    const int code = error->error_code;
-    throw XcbEventError("xcb_change_property_checked error", code);
+    throw XcbGenericError("xcb_change_property_checked error", error->error_code);
   }
 #else
   xcb_change_property(conn, XCB_PROP_MODE_REPLACE, win, wmprotocols_atom, XCB_ATOM_ATOM, 8 * sizeof(*props), sizeof(props)/sizeof(*props), props);
@@ -288,8 +287,7 @@ void XcbWindow::map()
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    const int code = error->error_code;
-    throw XcbEventError(code);
+    throw XcbGenericError(error->error_code);
   }
 #else
   xcb_map_window(conn, win);
@@ -304,8 +302,7 @@ void XcbWindow::unmap()
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    const int code = error->error_code;
-    throw XcbEventError(code);
+    throw XcbGenericError(error->error_code);
   }
 #else
   xcb_unmap_window(conn, win);
@@ -320,8 +317,7 @@ void XcbWindow::change(uint32_t value_mask, std::initializer_list<const uint32_t
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    const int code = error->error_code;
-    throw XcbEventError(code);
+    throw XcbGenericError(error->error_code);
   }
 #else
   xcb_change_window_attributes(conn, win, value_mask, value_list.begin());
@@ -343,7 +339,7 @@ XcbGC::XcbGC(
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    throw XcbEventError(error->error_code);
+    throw XcbGenericError(error->error_code);
   }
 }
 
@@ -355,9 +351,9 @@ XcbGC::~XcbGC()
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
     fprintf(stderr, "xcb_free_gc failed: %s (%d)\n",
-      XcbEventError::get_error_string(error->error_code),
+      XcbGenericError::get_error_string(error->error_code),
       error->error_code);
-//    throw XcbEventError(error->error_code);   // dtor shall be nothrow
+//    throw XcbGenericError(error->error_code);   // dtor shall be nothrow
   }
 #else
   xcb_free_gc(conn, gc);
@@ -372,8 +368,7 @@ void XcbGC::change(uint32_t value_mask, std::initializer_list<const uint32_t> va
 
   unique_xcb_generic_error_t error{xcb_request_check(conn, ck)};
   if (error) {
-    const int code = error->error_code;
-    throw XcbEventError(code);
+    throw XcbGenericError(error->error_code);
   }
 #else
   xcb_change_gc(conn, gc, value_mask, value_list.begin());
